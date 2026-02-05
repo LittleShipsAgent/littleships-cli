@@ -22,114 +22,228 @@ export const TEAM_AGENTS: AgentProfile[] = [
     domains: ["tooling", "infrastructure", "backend", "contracts", "cli"],
     shipTypes: ["feature", "infrastructure", "api", "tool", "contract"],
     keywords: [
+      // CLI & tooling
       "cli", "command", "terminal", "tool", "script", "build", "compile",
-      "contract", "solidity", "ethereum", "deploy", "backend", "server",
-      "api", "endpoint", "database", "migration", "schema", "tooling",
-      "npm", "package", "library", "sdk", "integration"
+      "parser", "generator", "scaffold", "boilerplate", "template",
+      // Blockchain
+      "contract", "solidity", "ethereum", "deploy", "web3", "ethers",
+      "hardhat", "foundry", "wagmi", "viem", "abi", "bytecode", "gas",
+      "transaction", "wallet", "signing", "blockchain", "onchain",
+      // Backend
+      "backend", "server", "api", "endpoint", "route", "handler",
+      "database", "migration", "schema", "query", "sql", "postgres",
+      "redis", "cache", "queue", "worker", "cron", "job",
+      // Packages
+      "npm", "package", "library", "sdk", "module", "dependency"
     ],
-    proofPatterns: ["etherscan", "basescan", "0x", "hardhat", "foundry"]
+    proofPatterns: ["etherscan", "basescan", "0x", "hardhat", "foundry", "/api/", "/lib/", "/server/"]
   },
   {
     handle: "beacon",
     role: "Frontend architect & UI specialist",
-    domains: ["frontend", "ui", "design", "components", "styling", "visual"],
+    domains: ["frontend", "ui", "design", "components", "styling", "visual", "ux"],
     shipTypes: ["feature", "ui", "enhancement", "design"],
     keywords: [
-      "ui", "frontend", "component", "react", "next", "tailwind", "css",
-      "design", "layout", "responsive", "animation", "style", "theme",
-      "dark mode", "light mode", "button", "modal", "form", "page",
-      "dashboard", "interface", "ux", "accessibility", "a11y",
-      "icon", "color", "gradient", "hover", "transition", "visual",
-      "card", "header", "footer", "nav", "sidebar", "menu", "tab",
-      "tooltip", "badge", "avatar", "skeleton", "loading", "spinner"
+      // Core UI
+      "ui", "frontend", "component", "widget", "element", "view",
+      "interface", "ux", "user experience", "user interface",
+      // Frameworks
+      "react", "next", "nextjs", "vue", "svelte", "solid",
+      // Styling
+      "tailwind", "css", "scss", "sass", "styled", "emotion",
+      "style", "styling", "theme", "theming", "dark mode", "light mode",
+      // Visual
+      "design", "layout", "responsive", "mobile", "desktop", "breakpoint",
+      "animation", "animate", "transition", "motion", "framer",
+      "visual", "aesthetic", "pixel", "spacing", "padding", "margin",
+      // Colors
+      "color", "colour", "gradient", "rainbow", "palette", "shade", "tint",
+      "primary", "secondary", "accent", "background", "foreground",
+      // Components
+      "button", "btn", "modal", "dialog", "popup", "drawer", "sheet",
+      "form", "input", "select", "checkbox", "radio", "toggle", "switch",
+      "card", "panel", "container", "wrapper", "box", "grid", "flex",
+      "header", "footer", "nav", "navbar", "sidebar", "menu", "dropdown",
+      "tab", "tabs", "accordion", "collapse", "expand",
+      "tooltip", "popover", "toast", "notification", "alert", "banner",
+      "badge", "pill", "chip", "tag", "label",
+      "avatar", "profile", "image", "icon", "logo", "svg",
+      "skeleton", "loading", "spinner", "progress", "loader",
+      "list", "table", "row", "column", "cell",
+      "link", "anchor", "breadcrumb", "pagination",
+      // Interactions
+      "hover", "focus", "active", "disabled", "click", "tap", "press",
+      "scroll", "drag", "drop", "resize", "zoom",
+      // A11y
+      "accessibility", "a11y", "aria", "screen reader", "keyboard"
     ],
-    proofPatterns: ["vercel", "netlify", "figma", "/components/", "/ui/"]
+    proofPatterns: ["vercel", "netlify", "figma", "/components/", "/ui/", "/styles/", "/app/", "/pages/"]
   },
   {
     handle: "scribe",
     role: "Documentation & content specialist",
-    domains: ["documentation", "content", "writing", "guides"],
+    domains: ["documentation", "content", "writing", "guides", "copy"],
     shipTypes: ["docs", "content", "documentation"],
     keywords: [
-      "doc", "documentation", "readme", "guide", "tutorial", "howto",
-      "example", "reference", "api docs", "changelog", "release notes",
-      "blog", "article", "post", "content", "writing", "spec", "rfc"
+      // Docs
+      "doc", "docs", "documentation", "readme", "guide", "tutorial",
+      "howto", "how-to", "walkthrough", "instructions", "manual",
+      // References
+      "reference", "api docs", "api reference", "specification", "spec",
+      "changelog", "release notes", "migration guide", "upgrade guide",
+      // Content
+      "blog", "article", "post", "content", "writing", "copy", "text",
+      "headline", "title", "description", "summary", "abstract",
+      // Technical writing
+      "rfc", "proposal", "adr", "decision record", "architecture doc",
+      "comment", "jsdoc", "tsdoc", "docstring", "annotation"
     ],
-    proofPatterns: ["docs.", "readme", "wiki", "notion", "gitbook"]
+    proofPatterns: ["docs.", "readme", "wiki", "notion", "gitbook", "/docs/", "CHANGELOG", "README"]
   },
   {
     handle: "navigator",
     role: "DevRel & developer experience",
-    domains: ["devrel", "examples", "tutorials", "integrations", "sdks"],
+    domains: ["devrel", "examples", "tutorials", "integrations", "sdks", "dx"],
     shipTypes: ["example", "tutorial", "integration", "sdk"],
     keywords: [
-      "example", "sample", "demo", "tutorial", "quickstart", "getting started",
-      "integration", "sdk", "client", "wrapper", "devrel", "developer",
-      "onboarding", "workshop", "talk", "conference", "community"
+      // Examples
+      "example", "sample", "demo", "showcase", "starter", "template",
+      // Learning
+      "tutorial", "quickstart", "getting started", "introduction", "intro",
+      "learn", "course", "lesson", "workshop", "bootcamp",
+      // Integration
+      "integration", "sdk", "client", "wrapper", "binding", "connector",
+      // DevRel
+      "devrel", "developer relations", "developer experience", "dx",
+      "onboarding", "adoption", "evangelism",
+      // Community
+      "talk", "conference", "meetup", "presentation", "slides",
+      "community", "discord", "slack", "forum", "support"
     ],
-    proofPatterns: ["codesandbox", "stackblitz", "replit"]
+    proofPatterns: ["codesandbox", "stackblitz", "replit", "/examples/", "/demo/", "/samples/"]
   },
   {
     handle: "sentinel",
     role: "Security & infrastructure hardening",
-    domains: ["security", "audit", "hardening", "compliance"],
+    domains: ["security", "audit", "hardening", "compliance", "safety"],
     shipTypes: ["security", "fix", "audit"],
     keywords: [
-      "security", "audit", "vulnerability", "cve", "fix", "patch",
-      "hardening", "rate limit", "auth", "authentication", "authorization",
-      "encryption", "ssl", "tls", "sanitize", "validate", "xss", "csrf",
-      "injection", "penetration", "compliance", "gdpr", "soc2"
+      // Security core
+      "security", "secure", "audit", "vulnerability", "vuln", "cve",
+      "exploit", "attack", "threat", "risk", "exposure",
+      // Fixes
+      "fix", "patch", "hotfix", "remediation", "mitigation",
+      "hardening", "harden", "strengthen", "protect", "defense",
+      // Auth
+      "auth", "authentication", "authorization", "permission", "access",
+      "login", "logout", "session", "token", "jwt", "oauth", "saml",
+      "password", "credential", "secret", "key management",
+      // Crypto
+      "encryption", "decrypt", "hash", "signature", "signing",
+      "ssl", "tls", "https", "certificate", "cert",
+      // Input safety
+      "sanitize", "sanitization", "validate", "validation", "escape",
+      "xss", "csrf", "injection", "sqli", "command injection",
+      "input validation", "output encoding",
+      // Rate limiting
+      "rate limit", "throttle", "ddos", "dos", "abuse", "spam",
+      // Compliance
+      "compliance", "gdpr", "soc2", "hipaa", "pci", "iso27001",
+      "penetration", "pentest", "bug bounty"
     ],
-    proofPatterns: ["security", "advisory", "cve"]
+    proofPatterns: ["security", "advisory", "cve", "/security/", "SECURITY.md"]
   },
   {
     handle: "prism",
     role: "Analytics & data insights",
-    domains: ["analytics", "metrics", "dashboards", "data"],
+    domains: ["analytics", "metrics", "dashboards", "data", "insights"],
     shipTypes: ["analytics", "feature", "dashboard"],
     keywords: [
-      "analytics", "metrics", "dashboard", "chart", "graph", "data",
-      "tracking", "event", "funnel", "conversion", "report", "insight",
-      "visualization", "stats", "statistics", "monitoring", "observability"
+      // Analytics
+      "analytics", "tracking", "telemetry", "instrumentation",
+      "event", "events", "pageview", "click tracking",
+      // Metrics
+      "metrics", "measurement", "kpi", "indicator", "benchmark",
+      "performance", "latency", "throughput", "uptime",
+      // Visualization
+      "dashboard", "chart", "graph", "plot", "visualization", "viz",
+      "report", "reporting", "insight", "trend", "pattern",
+      // Data
+      "data", "dataset", "aggregation", "rollup", "timeseries",
+      "funnel", "conversion", "retention", "cohort", "segment",
+      "stats", "statistics", "average", "median", "percentile",
+      // Tools
+      "monitoring", "observability", "alerting", "anomaly"
     ],
-    proofPatterns: ["grafana", "datadog", "amplitude", "mixpanel"]
+    proofPatterns: ["grafana", "datadog", "amplitude", "mixpanel", "posthog", "/analytics/", "/metrics/"]
   },
   {
     handle: "helix",
     role: "Research & experimental features",
-    domains: ["research", "experiments", "prototypes", "innovation"],
+    domains: ["research", "experiments", "prototypes", "innovation", "r&d"],
     shipTypes: ["experiment", "research", "prototype"],
     keywords: [
-      "experiment", "prototype", "research", "exploration", "poc",
-      "proof of concept", "spike", "investigation", "test", "trial",
-      "alpha", "beta", "experimental", "innovation", "novel"
+      // Research
+      "experiment", "experimental", "prototype", "prototyping",
+      "research", "r&d", "exploration", "exploratory", "investigate",
+      // Early stage
+      "poc", "proof of concept", "spike", "feasibility", "study",
+      "trial", "test", "hypothesis", "validation",
+      // Innovation
+      "alpha", "beta", "preview", "canary", "feature flag",
+      "innovation", "novel", "new approach", "breakthrough",
+      "cutting edge", "bleeding edge", "emerging"
     ],
-    proofPatterns: []
+    proofPatterns: ["/experiments/", "/research/", "/prototypes/", "/spikes/"]
   },
   {
     handle: "flux",
     role: "Automation & CI/CD specialist",
-    domains: ["automation", "ci", "cd", "deployments", "workflows"],
+    domains: ["automation", "ci", "cd", "deployments", "workflows", "devops"],
     shipTypes: ["infrastructure", "automation", "ci"],
     keywords: [
-      "ci", "cd", "pipeline", "workflow", "action", "automation",
-      "deploy", "deployment", "release", "build", "test", "lint",
-      "github actions", "jenkins", "docker", "kubernetes", "k8s",
-      "terraform", "ansible", "infrastructure as code", "iac"
+      // CI/CD
+      "ci", "cd", "cicd", "ci/cd", "continuous integration", "continuous deployment",
+      "pipeline", "workflow", "action", "job", "step", "stage",
+      // Automation
+      "automation", "automate", "automated", "script", "cron", "scheduled",
+      "trigger", "hook", "webhook", "callback",
+      // Deploy
+      "deploy", "deployment", "release", "rollout", "rollback",
+      "staging", "production", "environment", "env",
+      // Build
+      "build", "compile", "bundle", "package", "artifact",
+      "test", "lint", "format", "check", "validate",
+      // Infra
+      "docker", "container", "kubernetes", "k8s", "helm", "pod",
+      "terraform", "pulumi", "cloudformation", "iac",
+      "ansible", "chef", "puppet", "salt",
+      // Platforms
+      "github actions", "gitlab ci", "jenkins", "circleci", "travis",
+      "aws", "gcp", "azure", "vercel", "netlify", "railway", "fly"
     ],
-    proofPatterns: ["github.com/actions", "circleci", "jenkins"]
+    proofPatterns: ["github.com/actions", "circleci", "jenkins", "/.github/", "/workflows/", "Dockerfile"]
   },
   {
     handle: "atlas",
     role: "Product manager & strategic lead",
-    domains: ["product", "strategy", "launches", "announcements"],
+    domains: ["product", "strategy", "launches", "announcements", "planning"],
     shipTypes: ["launch", "announcement", "milestone"],
     keywords: [
-      "launch", "announce", "release", "milestone", "roadmap", "strategy",
-      "product", "feature complete", "ga", "general availability", "v1",
-      "mvp", "beta launch", "public launch", "go live"
+      // Launches
+      "launch", "announce", "announcement", "release", "ship",
+      "go live", "live", "public", "generally available", "ga",
+      // Milestones
+      "milestone", "complete", "finished", "done", "shipped",
+      "v1", "v2", "1.0", "2.0", "mvp", "beta launch",
+      // Strategy
+      "roadmap", "strategy", "strategic", "vision", "direction",
+      "planning", "plan", "priority", "prioritize", "scope",
+      // Product
+      "product", "feature complete", "user story", "requirement",
+      "stakeholder", "customer", "user feedback", "iteration"
     ],
-    proofPatterns: ["producthunt", "twitter.com", "x.com"]
+    proofPatterns: ["producthunt", "twitter.com", "x.com", "/announcements/", "CHANGELOG"]
   }
 ];
 
