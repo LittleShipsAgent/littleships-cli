@@ -4,7 +4,7 @@
  */
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { confirm, input } from "@inquirer/prompts";
+import { confirm, input, checkbox } from "@inquirer/prompts";
 import { getDefaultAgent, loadKeyPair } from "../lib/keys.js";
 import { signShip } from "../lib/sign.js";
 import { submitShip } from "../lib/api.js";
@@ -15,14 +15,26 @@ interface GitCommit {
   date: string;
 }
 
-function getRecentCommits(days: number = 7): GitCommit[] {
+function getRecentCommits(count?: number, days?: number): GitCommit[] {
   try {
-    // Ensure days is a safe integer
-    const safeDays = Math.max(1, Math.min(365, Math.floor(days) || 7));
-    const output = execSync(
-      `git log --oneline --since="${safeDays} days ago" --format="%H|%s|%ai"`,
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
+    let cmd = `git log --format="%H|%s|%ai"`;
+    
+    if (count) {
+      // Get last N commits
+      cmd += ` -n ${Math.max(1, Math.min(50, count))}`;
+    } else if (days) {
+      // Get commits from last N days
+      const safeDays = Math.max(1, Math.min(365, Math.floor(days) || 7));
+      cmd += ` --since="${safeDays} days ago"`;
+    } else {
+      // Default: last 7 days
+      cmd += ` --since="7 days ago"`;
+    }
+    
+    const output = execSync(cmd, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     
     return output
       .trim()
@@ -44,7 +56,6 @@ function getRepoUrl(): string | null {
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
     
-    // Convert SSH to HTTPS
     if (remote.startsWith("git@github.com:")) {
       return remote.replace("git@github.com:", "https://github.com/").replace(/\.git$/, "");
     }
@@ -54,71 +65,52 @@ function getRepoUrl(): string | null {
   }
 }
 
-function groupCommitsByTheme(commits: GitCommit[]): Map<string, GitCommit[]> {
-  const groups = new Map<string, GitCommit[]>();
-  
-  for (const commit of commits) {
-    const msg = commit.message.toLowerCase();
-    let theme = "other";
-    
-    if (msg.startsWith("feat") || msg.includes("add") || msg.includes("implement")) {
-      theme = "feature";
-    } else if (msg.startsWith("fix") || msg.includes("bug")) {
-      theme = "fix";
-    } else if (msg.startsWith("doc") || msg.includes("readme")) {
-      theme = "docs";
-    } else if (msg.startsWith("refactor") || msg.includes("clean")) {
-      theme = "refactor";
-    } else if (msg.includes("test")) {
-      theme = "test";
-    }
-    
-    if (!groups.has(theme)) {
-      groups.set(theme, []);
-    }
-    groups.get(theme)!.push(commit);
-  }
-  
-  return groups;
+function inferShipType(message: string): string {
+  const msg = message.toLowerCase();
+  if (msg.startsWith("feat") || msg.includes("add") || msg.includes("implement")) return "feature";
+  if (msg.startsWith("fix") || msg.includes("bug")) return "fix";
+  if (msg.startsWith("doc") || msg.includes("readme")) return "docs";
+  if (msg.startsWith("refactor") || msg.includes("clean")) return "refactor";
+  if (msg.includes("security") || msg.includes("vuln")) return "security";
+  if (msg.includes("test")) return "test";
+  return "feature";
 }
 
-export async function suggestCommand(options: { days?: number }) {
-  const days = options.days || 7;
-  
-  console.log(chalk.cyan(`\n🔍 Checking for unshipped work (last ${days} days)...\n`));
-  
-  // Check if we're in a git repo
+export async function suggestCommand(options: { days?: number; last?: number }) {
   const repoUrl = getRepoUrl();
   if (!repoUrl) {
     console.log(chalk.yellow("Not in a git repository. Run this from a project directory."));
     return;
   }
   
-  // Get recent commits
-  const commits = getRecentCommits(days);
+  // Get commits based on options
+  const commits = options.last 
+    ? getRecentCommits(options.last, undefined)
+    : getRecentCommits(undefined, options.days || 7);
+  
   if (commits.length === 0) {
-    console.log(chalk.gray("No commits found in the last " + days + " days."));
+    console.log(chalk.gray("No commits found."));
     return;
   }
   
-  console.log(chalk.white(`Found ${commits.length} commits in ${chalk.cyan(repoUrl)}\n`));
+  console.log(chalk.cyan(`\n🔍 Found ${commits.length} commits in ${chalk.white(repoUrl)}\n`));
   
-  // Group by theme
-  const groups = groupCommitsByTheme(commits);
+  // Show commits and let user select
+  const selected = await checkbox({
+    message: "Select commits to include in this ship:",
+    choices: commits.map((c, i) => ({
+      value: c,
+      name: `${chalk.dim(c.hash.slice(0, 7))} ${c.message.slice(0, 60)}`,
+      checked: i === 0, // Default: only latest commit selected
+    })),
+  });
   
-  // Show summary
-  for (const [theme, themeCommits] of groups) {
-    const icon = theme === "feature" ? "✨" : theme === "fix" ? "🐛" : theme === "docs" ? "📝" : "🔧";
-    console.log(chalk.white(`${icon} ${theme}: ${themeCommits.length} commits`));
-    for (const c of themeCommits.slice(0, 3)) {
-      console.log(chalk.gray(`   ${c.hash.slice(0, 7)} ${c.message.slice(0, 50)}`));
-    }
-    if (themeCommits.length > 3) {
-      console.log(chalk.gray(`   ... and ${themeCommits.length - 3} more`));
-    }
+  if (selected.length === 0) {
+    console.log(chalk.gray("No commits selected. Cancelled."));
+    return;
   }
   
-  // Check if agent is set up
+  // Check agent
   const agent = getDefaultAgent();
   if (!agent) {
     console.log(chalk.yellow("\n⚠️  No agent configured. Run `littleships init` first."));
@@ -127,23 +119,10 @@ export async function suggestCommand(options: { days?: number }) {
   
   const agentHandle = agent.handle.replace(/^@/, "");
   
-  // Ask if they want to ship
-  console.log();
-  const shouldShip = await confirm({
-    message: "Ship this work to LittleShips?",
-    default: true,
-  });
+  console.log(chalk.dim(`\nShipping ${selected.length} commit(s) as @${agentHandle}\n`));
   
-  if (!shouldShip) {
-    console.log(chalk.gray("No worries. Run `littleships suggest` anytime."));
-    return;
-  }
-  
-  // Suggest a title based on commits
-  const mainTheme = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0];
-  const suggestedTitle = mainTheme 
-    ? `${mainTheme[0].charAt(0).toUpperCase() + mainTheme[0].slice(1)}: ${mainTheme[1][0].message.slice(0, 50)}`
-    : commits[0].message;
+  // Suggest title from first selected commit
+  const suggestedTitle = selected[0].message.slice(0, 80);
   
   const title = await input({
     message: "Title:",
@@ -154,17 +133,18 @@ export async function suggestCommand(options: { days?: number }) {
     message: "Description (one sentence):",
   });
   
-  // Build changelog from commits
-  const changelog = commits.slice(0, 5).map((c) => c.message);
-  console.log(chalk.gray("\nChangelog (from commits):"));
-  changelog.forEach((c) => console.log(chalk.gray(`  - ${c}`)));
+  // Build changelog from selected commits
+  const changelog = selected.map((c) => c.message);
+  console.log(chalk.dim("\nChangelog:"));
+  changelog.forEach((c) => console.log(chalk.dim(`  - ${c}`)));
   
-  // Build proof URL (link to latest commit)
-  const proofUrl = `${repoUrl}/commit/${commits[0].hash}`;
-  console.log(chalk.gray(`\nProof: ${proofUrl}`));
+  // Build proof URLs — link to each selected commit
+  const proofUrls = selected.map((c) => `${repoUrl}/commit/${c.hash}`);
+  console.log(chalk.dim("\nProof:"));
+  proofUrls.forEach((p) => console.log(chalk.dim(`  ${p}`)));
   
   const confirmShip = await confirm({
-    message: "Submit this ship?",
+    message: "\nSubmit this ship?",
     default: true,
   });
   
@@ -173,19 +153,15 @@ export async function suggestCommand(options: { days?: number }) {
     return;
   }
   
-  // Load keys and submit
+  // Load keys
   const keyPair = loadKeyPair(agentHandle);
   if (!keyPair) {
     console.log(chalk.red("Could not load keys for " + agentHandle));
     return;
   }
   
-  const shipType = mainTheme?.[0] === "feature" ? "feature" 
-    : mainTheme?.[0] === "fix" ? "fix"
-    : mainTheme?.[0] === "docs" ? "docs"
-    : "feature";
-  
-  const proof = [{ type: "github" as const, value: proofUrl }];
+  const shipType = inferShipType(selected[0].message);
+  const proof = proofUrls.map((url) => ({ type: "github" as const, value: url }));
   const agentId = agent.agentId;
   
   const { signature, timestamp } = await signShip(agentId, title, proof, keyPair.privateKey);

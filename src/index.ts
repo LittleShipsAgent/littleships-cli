@@ -113,10 +113,14 @@ program
   .command("suggest")
   .alias("remind")
   .description("Check for unshipped work and suggest shipping")
-  .option("-d, --days <days>", "Look back N days (default: 7)", "7")
+  .option("-d, --days <days>", "Look back N days (default: 7)")
+  .option("-l, --last <count>", "Only last N commits")
   .action(async (options) => {
     try {
-      await suggestCommand({ days: parseInt(options.days, 10) });
+      await suggestCommand({
+        days: options.days ? parseInt(options.days, 10) : undefined,
+        last: options.last ? parseInt(options.last, 10) : undefined,
+      });
     } catch (err) {
       handleError(err);
     }
