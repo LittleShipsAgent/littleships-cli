@@ -78,82 +78,78 @@ function inferShipType(message: string): string {
 }
 
 /**
- * Generate a 2-sentence description from commit messages
+ * Generate a 2-sentence description from the TITLE (not commits)
+ * This allows the description to match user's edited title
  */
-function suggestDescription(commits: GitCommit[]): string {
-  if (commits.length === 0) return "";
+function suggestDescriptionFromTitle(title: string): string {
+  // Clean title: remove prefix (feat:, fix:, etc) and capitalize
+  const cleanTitle = title
+    .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
+    .replace(/^./, (c) => c.toUpperCase())
+    .replace(/\.$/, "");
   
-  // Clean commit message: remove prefix (feat:, fix:, etc) and capitalize
-  const cleanMessage = (msg: string): string => {
-    return msg
-      .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
-      .replace(/^./, (c) => c.toUpperCase());
-  };
+  const m = title.toLowerCase();
   
-  const firstCommit = cleanMessage(commits[0].message);
-  const msgLower = commits[0].message.toLowerCase();
+  // Generate contextual second sentence based on keywords in title
+  let context: string;
   
-  // Generate contextual second sentence based on keywords
-  const generateContext = (msg: string): string => {
-    const m = msg.toLowerCase();
-    
-    // UI/Visual patterns
-    if (/\b(ui|visual|design|style|theme|color|gradient|rainbow)\b/.test(m)) {
-      if (/\b(team|profile|agent)\b/.test(m)) return "Visual enhancement for the team/profile experience.";
-      if (/\b(button|btn|pill|badge|chip)\b/.test(m)) return "Improves visual components and interaction feedback.";
-      if (/\b(layout|page|view|display)\b/.test(m)) return "Enhances page layout and visual presentation.";
-      if (/\b(animation|animate|transition|motion)\b/.test(m)) return "Adds motion and visual polish to the interface.";
-      return "Visual improvements to the user interface.";
-    }
-    
-    // Component patterns
-    if (/\b(component|button|modal|form|card|header|nav|sidebar)\b/.test(m)) {
-      return "Improves component design and usability.";
-    }
-    
-    // Layout/structure
-    if (/\b(layout|grid|flex|responsive|mobile|spacing)\b/.test(m)) {
-      return "Enhances layout structure and responsiveness.";
-    }
-    
-    // Animation
-    if (/\b(animation|animate|transition|hover|effect)\b/.test(m)) {
-      return "Adds interactive animations and visual feedback.";
-    }
-    
-    // API/Backend
-    if (/\b(api|endpoint|route|server|backend|database)\b/.test(m)) {
-      return "Backend improvements for better functionality.";
-    }
-    
-    // Security
-    if (/\b(security|auth|permission|sanitize|validate|injection)\b/.test(m)) {
-      return "Strengthens security and input handling.";
-    }
-    
-    // Docs
-    if (/\b(doc|readme|guide|tutorial|comment)\b/.test(m)) {
-      return "Improves documentation and clarity.";
-    }
-    
-    // Fix
-    if (/\b(fix|bug|issue|error|broken|resolve)\b/.test(m)) {
-      return "Resolves an issue affecting user experience.";
-    }
-    
-    // Refactor
-    if (/\b(refactor|clean|restructure|organize|simplify)\b/.test(m)) {
-      return "Code quality improvement with no behavior change.";
-    }
-    
-    // Performance
-    if (/\b(perf|performance|speed|fast|optimize|cache)\b/.test(m)) {
-      return "Performance optimization for better responsiveness.";
-    }
-    
-    // Default based on ship type
-    const shipType = inferShipType(msg);
-    return {
+  // Docs patterns (check first - tweets, blogs, etc are docs)
+  if (/\b(doc|docs|readme|guide|tutorial|comment|tweet|blog|video|press|article)\b/.test(m)) {
+    if (/\b(tweet|twitter|x\.com)\b/.test(m)) context = "Documentation for social proof and announcements.";
+    else if (/\b(blog|article|post)\b/.test(m)) context = "Content documentation and guides.";
+    else if (/\b(video|youtube)\b/.test(m)) context = "Video content and tutorials.";
+    else if (/\b(proof|best practice)\b/.test(m)) context = "Guidance on proof standards and best practices.";
+    else context = "Improves documentation and clarity.";
+  }
+  // UI/Visual patterns
+  else if (/\b(ui|visual|design|style|theme|color|gradient|rainbow)\b/.test(m)) {
+    if (/\b(team|profile|agent)\b/.test(m)) context = "Visual enhancement for the team/profile experience.";
+    else if (/\b(button|btn|pill|badge|chip)\b/.test(m)) context = "Improves visual components and interaction feedback.";
+    else if (/\b(layout|page|view|display)\b/.test(m)) context = "Enhances page layout and visual presentation.";
+    else if (/\b(animation|animate|transition|motion)\b/.test(m)) context = "Adds motion and visual polish to the interface.";
+    else context = "Visual improvements to the user interface.";
+  }
+  // Component patterns
+  else if (/\b(component|button|modal|form|card|header|nav|sidebar|pill|badge)\b/.test(m)) {
+    if (/\b(animation|animate|transition|hover)\b/.test(m)) context = "Adds interactive animations to UI components.";
+    else context = "Improves component design and usability.";
+  }
+  // Layout/structure
+  else if (/\b(layout|grid|flex|responsive|mobile|spacing|enhance)\b/.test(m)) {
+    context = "Enhances layout structure and responsiveness.";
+  }
+  // Animation
+  else if (/\b(animation|animate|animated|transition|hover|effect)\b/.test(m)) {
+    context = "Adds interactive animations and visual feedback.";
+  }
+  // API/Backend
+  else if (/\b(api|endpoint|route|server|backend|database)\b/.test(m)) {
+    context = "Backend improvements for better functionality.";
+  }
+  // Security
+  else if (/\b(security|auth|permission|sanitize|validate|injection)\b/.test(m)) {
+    context = "Strengthens security and input handling.";
+  }
+  // Fix
+  else if (/\b(fix|bug|issue|error|broken|resolve)\b/.test(m)) {
+    context = "Resolves an issue affecting user experience.";
+  }
+  // Refactor
+  else if (/\b(refactor|clean|restructure|organize|simplify)\b/.test(m)) {
+    context = "Code quality improvement with no behavior change.";
+  }
+  // Performance
+  else if (/\b(perf|performance|speed|fast|optimize|cache)\b/.test(m)) {
+    context = "Performance optimization for better responsiveness.";
+  }
+  // Role/management
+  else if (/\b(role|management|metadata|retrieval|function)\b/.test(m)) {
+    context = "Improves data management and organization.";
+  }
+  // Default based on inferred type
+  else {
+    const shipType = inferShipType(title);
+    context = {
       feature: "New functionality added to the project.",
       fix: "Resolves an issue affecting functionality.",
       docs: "Improves project documentation.",
@@ -161,16 +157,9 @@ function suggestDescription(commits: GitCommit[]): string {
       security: "Strengthens security posture.",
       test: "Improves test coverage.",
     }[shipType] || "Incremental improvement to the project.";
-  };
-  
-  if (commits.length === 1) {
-    const context = generateContext(commits[0].message);
-    return `${firstCommit.replace(/\.$/, "")}. ${context}`;
   }
   
-  // Multiple commits: summarize scope + use context from first
-  const context = generateContext(commits[0].message);
-  return `${firstCommit.replace(/\.$/, "")}. ${context} Includes ${commits.length} related changes.`;
+  return `${cleanTitle}. ${context}`;
 }
 
 export async function suggestCommand(options: { days?: number; last?: number }) {
@@ -225,7 +214,8 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     default: suggestedTitle,
   });
   
-  const suggestedDesc = suggestDescription(selected);
+  // Generate description based on the TITLE (which user may have edited), not commit
+  const suggestedDesc = suggestDescriptionFromTitle(title);
   const description = await input({
     message: "Description (2 sentences):",
     default: suggestedDesc,
