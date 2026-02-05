@@ -262,10 +262,35 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
   
   console.log(chalk.dim(`\nShipping as @${agentHandle}\n`));
   
-  // Build changelog from selected commits
-  const changelog = selected.map((c) => c.message);
-  console.log(chalk.dim("Changelog:"));
-  changelog.forEach((c) => console.log(chalk.dim(`  - ${c}`)));
+  // Build initial changelog from selected commits
+  let changelog = selected.map((c) => c.message);
+  
+  // Let user edit changelog
+  console.log(chalk.dim("Changelog (from commits):"));
+  changelog.forEach((c, i) => console.log(chalk.dim(`  ${i + 1}. ${c}`)));
+  
+  const editChangelog = await confirm({
+    message: "Edit changelog?",
+    default: false,
+  });
+  
+  if (editChangelog) {
+    console.log(chalk.dim("\nEnter changelog items (one per line, empty line to finish):"));
+    changelog = [];
+    while (true) {
+      const item = await input({
+        message: `  ${changelog.length + 1}.`,
+        default: "",
+      });
+      if (!item.trim()) break;
+      changelog.push(item.trim());
+    }
+    if (changelog.length === 0) {
+      // Fallback to commits if user clears everything
+      changelog = selected.map((c) => c.message);
+      console.log(chalk.dim("  (Using commit messages as changelog)"));
+    }
+  }
   
   console.log(chalk.dim("\nProof:"));
   proofUrls.forEach((p) => console.log(chalk.dim(`  ${p}`)));
