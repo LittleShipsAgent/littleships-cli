@@ -32,15 +32,18 @@ export const TEAM_AGENTS: AgentProfile[] = [
   {
     handle: "beacon",
     role: "Frontend architect & UI specialist",
-    domains: ["frontend", "ui", "design", "components", "styling"],
+    domains: ["frontend", "ui", "design", "components", "styling", "visual"],
     shipTypes: ["feature", "ui", "enhancement", "design"],
     keywords: [
       "ui", "frontend", "component", "react", "next", "tailwind", "css",
       "design", "layout", "responsive", "animation", "style", "theme",
       "dark mode", "light mode", "button", "modal", "form", "page",
-      "dashboard", "interface", "ux", "accessibility", "a11y"
+      "dashboard", "interface", "ux", "accessibility", "a11y",
+      "icon", "color", "gradient", "hover", "transition", "visual",
+      "card", "header", "footer", "nav", "sidebar", "menu", "tab",
+      "tooltip", "badge", "avatar", "skeleton", "loading", "spinner"
     ],
-    proofPatterns: ["vercel", "netlify", "figma"]
+    proofPatterns: ["vercel", "netlify", "figma", "/components/", "/ui/"]
   },
   {
     handle: "scribe",

@@ -171,24 +171,37 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     
     if (suggestion.recommended !== agentHandle) {
       const profile = getAgentProfile(suggestion.recommended);
-      console.log();
-      console.log(chalk.yellow(`💡 Suggestion: This looks like ${chalk.bold("@" + suggestion.recommended)}'s work`));
-      console.log(chalk.dim(`   ${profile?.role ?? ""}`));
-      console.log(chalk.dim(`   ${suggestion.reason} (${suggestion.confidence} confidence)`));
       
       // Check if we have keys for the suggested agent
       const suggestedKeyPair = loadKeyPair(suggestion.recommended);
       if (suggestedKeyPair && config.agents[suggestion.recommended]) {
-        const switchAgent = await confirm({
-          message: `Ship as @${suggestion.recommended} instead of @${agentHandle}?`,
-          default: suggestion.confidence === "high",
-        });
-        if (switchAgent) {
+        if (suggestion.confidence === "high") {
+          // Auto-switch on high confidence
+          console.log();
+          console.log(chalk.cyan(`🎯 Auto-switching to ${chalk.bold("@" + suggestion.recommended)}`));
+          console.log(chalk.dim(`   ${profile?.role ?? ""}`));
+          console.log(chalk.dim(`   ${suggestion.reason}`));
           finalAgentHandle = suggestion.recommended;
-          console.log(chalk.dim(`\nSwitched to @${finalAgentHandle}\n`));
+        } else {
+          // Ask on medium/low confidence
+          console.log();
+          console.log(chalk.yellow(`💡 Suggestion: This looks like ${chalk.bold("@" + suggestion.recommended)}'s work`));
+          console.log(chalk.dim(`   ${profile?.role ?? ""}`));
+          console.log(chalk.dim(`   ${suggestion.reason} (${suggestion.confidence} confidence)`));
+          
+          const switchAgent = await confirm({
+            message: `Ship as @${suggestion.recommended} instead of @${agentHandle}?`,
+            default: true,
+          });
+          if (switchAgent) {
+            finalAgentHandle = suggestion.recommended;
+            console.log(chalk.dim(`\nSwitched to @${finalAgentHandle}\n`));
+          }
         }
       } else {
-        console.log(chalk.dim(`   (Keys not configured for @${suggestion.recommended}, using @${agentHandle})\n`));
+        console.log();
+        console.log(chalk.yellow(`💡 This looks like ${chalk.bold("@" + suggestion.recommended)}'s work`));
+        console.log(chalk.dim(`   (Keys not configured — using @${agentHandle})\n`));
       }
     }
   }
