@@ -36,22 +36,73 @@ function suggestDescription(title: string, shipType: string): string {
     .replace(/^./, (c) => c.toUpperCase())
     .replace(/\.$/, "");
   
-  // Add contextual second sentence based on ship type
-  const context: Record<string, string> = {
-    feature: "New functionality added to the project.",
-    enhancement: "Improves existing functionality.",
-    fix: "Resolves an issue affecting users.",
-    refactor: "Code quality improvement with no behavior change.",
-    docs: "Improves project documentation.",
-    api: "Backend API changes.",
-    ui: "User interface improvements.",
-    security: "Strengthens security posture.",
-    infrastructure: "DevOps and infrastructure work.",
-    content: "New content published.",
-    other: "Incremental project improvement.",
+  const m = title.toLowerCase();
+  
+  // Generate contextual second sentence based on keywords in title
+  const generateContext = (): string => {
+    // UI/Visual patterns
+    if (/\b(ui|visual|design|style|theme|color|gradient|rainbow)\b/.test(m)) {
+      if (/\b(team|profile|agent)\b/.test(m)) return "Visual enhancement for the team/profile experience.";
+      if (/\b(button|btn|pill|badge|chip)\b/.test(m)) return "Improves visual components and interaction feedback.";
+      if (/\b(layout|page|view|display)\b/.test(m)) return "Enhances page layout and visual presentation.";
+      if (/\b(animation|animate|transition|motion)\b/.test(m)) return "Adds motion and visual polish to the interface.";
+      return "Visual improvements to the user interface.";
+    }
+    
+    // Component patterns
+    if (/\b(component|button|modal|form|card|header|nav|sidebar|pill|badge)\b/.test(m)) {
+      if (/\b(animation|animate|transition|hover)\b/.test(m)) return "Adds interactive animations to UI components.";
+      return "Improves component design and usability.";
+    }
+    
+    // Layout/structure
+    if (/\b(layout|grid|flex|responsive|mobile|spacing|enhance)\b/.test(m)) {
+      return "Enhances layout structure and responsiveness.";
+    }
+    
+    // Animation
+    if (/\b(animation|animate|animated|transition|hover|effect)\b/.test(m)) {
+      return "Adds interactive animations and visual feedback.";
+    }
+    
+    // API/Backend
+    if (/\b(api|endpoint|route|server|backend|database)\b/.test(m)) {
+      return "Backend improvements for better functionality.";
+    }
+    
+    // Security
+    if (/\b(security|auth|permission|sanitize|validate|injection)\b/.test(m)) {
+      return "Strengthens security and input handling.";
+    }
+    
+    // Docs
+    if (/\b(doc|readme|guide|tutorial|comment)\b/.test(m)) {
+      return "Improves documentation and clarity.";
+    }
+    
+    // Performance
+    if (/\b(perf|performance|speed|fast|optimize|cache)\b/.test(m)) {
+      return "Performance optimization for better responsiveness.";
+    }
+    
+    // Default based on ship type
+    const context: Record<string, string> = {
+      feature: "New functionality added to the project.",
+      enhancement: "Improves existing functionality.",
+      fix: "Resolves an issue affecting users.",
+      refactor: "Code quality improvement with no behavior change.",
+      docs: "Improves project documentation.",
+      api: "Backend API changes.",
+      ui: "User interface improvements.",
+      security: "Strengthens security posture.",
+      infrastructure: "DevOps and infrastructure work.",
+      content: "New content published.",
+      other: "Incremental project improvement.",
+    };
+    return context[shipType] || context.other;
   };
   
-  return `${cleanTitle}. ${context[shipType] || context.other}`;
+  return `${cleanTitle}. ${generateContext()}`;
 }
 
 interface ShipOptions {

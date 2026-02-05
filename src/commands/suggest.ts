@@ -91,34 +91,86 @@ function suggestDescription(commits: GitCommit[]): string {
   };
   
   const firstCommit = cleanMessage(commits[0].message);
+  const msgLower = commits[0].message.toLowerCase();
   
-  if (commits.length === 1) {
-    // Single commit: describe what + add context
-    const shipType = inferShipType(commits[0].message);
-    const context = {
+  // Generate contextual second sentence based on keywords
+  const generateContext = (msg: string): string => {
+    const m = msg.toLowerCase();
+    
+    // UI/Visual patterns
+    if (/\b(ui|visual|design|style|theme|color|gradient|rainbow)\b/.test(m)) {
+      if (/\b(team|profile|agent)\b/.test(m)) return "Visual enhancement for the team/profile experience.";
+      if (/\b(button|btn|pill|badge|chip)\b/.test(m)) return "Improves visual components and interaction feedback.";
+      if (/\b(layout|page|view|display)\b/.test(m)) return "Enhances page layout and visual presentation.";
+      if (/\b(animation|animate|transition|motion)\b/.test(m)) return "Adds motion and visual polish to the interface.";
+      return "Visual improvements to the user interface.";
+    }
+    
+    // Component patterns
+    if (/\b(component|button|modal|form|card|header|nav|sidebar)\b/.test(m)) {
+      return "Improves component design and usability.";
+    }
+    
+    // Layout/structure
+    if (/\b(layout|grid|flex|responsive|mobile|spacing)\b/.test(m)) {
+      return "Enhances layout structure and responsiveness.";
+    }
+    
+    // Animation
+    if (/\b(animation|animate|transition|hover|effect)\b/.test(m)) {
+      return "Adds interactive animations and visual feedback.";
+    }
+    
+    // API/Backend
+    if (/\b(api|endpoint|route|server|backend|database)\b/.test(m)) {
+      return "Backend improvements for better functionality.";
+    }
+    
+    // Security
+    if (/\b(security|auth|permission|sanitize|validate|injection)\b/.test(m)) {
+      return "Strengthens security and input handling.";
+    }
+    
+    // Docs
+    if (/\b(doc|readme|guide|tutorial|comment)\b/.test(m)) {
+      return "Improves documentation and clarity.";
+    }
+    
+    // Fix
+    if (/\b(fix|bug|issue|error|broken|resolve)\b/.test(m)) {
+      return "Resolves an issue affecting user experience.";
+    }
+    
+    // Refactor
+    if (/\b(refactor|clean|restructure|organize|simplify)\b/.test(m)) {
+      return "Code quality improvement with no behavior change.";
+    }
+    
+    // Performance
+    if (/\b(perf|performance|speed|fast|optimize|cache)\b/.test(m)) {
+      return "Performance optimization for better responsiveness.";
+    }
+    
+    // Default based on ship type
+    const shipType = inferShipType(msg);
+    return {
       feature: "New functionality added to the project.",
       fix: "Resolves an issue affecting functionality.",
       docs: "Improves project documentation.",
-      refactor: "Code quality improvement with no behavior change.",
+      refactor: "Code quality improvement.",
       security: "Strengthens security posture.",
       test: "Improves test coverage.",
     }[shipType] || "Incremental improvement to the project.";
-    
+  };
+  
+  if (commits.length === 1) {
+    const context = generateContext(commits[0].message);
     return `${firstCommit.replace(/\.$/, "")}. ${context}`;
   }
   
-  // Multiple commits: summarize scope
-  const types = commits.map(c => inferShipType(c.message));
-  const uniqueTypes = [...new Set(types)];
-  
-  let scope = "";
-  if (uniqueTypes.length === 1) {
-    scope = `${commits.length} related changes`;
-  } else {
-    scope = `${commits.length} changes spanning ${uniqueTypes.slice(0, 3).join(", ")}`;
-  }
-  
-  return `${firstCommit.replace(/\.$/, "")}. Includes ${scope}.`;
+  // Multiple commits: summarize scope + use context from first
+  const context = generateContext(commits[0].message);
+  return `${firstCommit.replace(/\.$/, "")}. ${context} Includes ${commits.length} related changes.`;
 }
 
 export async function suggestCommand(options: { days?: number; last?: number }) {
