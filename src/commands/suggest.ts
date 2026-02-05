@@ -5,7 +5,8 @@
 import chalk from "chalk";
 import { execSync } from "child_process";
 import { confirm, input, checkbox } from "@inquirer/prompts";
-import { getDefaultAgent, loadKeyPair } from "../lib/keys.js";
+import { getDefaultAgent, loadKeyPair, loadConfig } from "../lib/keys.js";
+import { pickShipAgent, getAgentProfile } from "../lib/agent-picker.js";
 import { signShip } from "../lib/sign.js";
 import { submitShip } from "../lib/api.js";
 
@@ -155,15 +156,14 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
   }
   
   // Check agent
-  const agent = getDefaultAgent();
-  if (!agent) {
+  const defaultAgent = getDefaultAgent();
+  if (!defaultAgent) {
     console.log(chalk.yellow("\n⚠️  No agent configured. Run `littleships init` first."));
     return;
   }
   
-  const agentHandle = agent.handle.replace(/^@/, "");
-  
-  console.log(chalk.dim(`\nShipping ${selected.length} commit(s) as @${agentHandle}\n`));
+  const config = loadConfig();
+  let agentHandle = defaultAgent.handle.replace(/^@/, "");
   
   // Suggest title from first selected commit
   const suggestedTitle = selected[0].message.slice(0, 80);
@@ -179,13 +179,52 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     default: suggestedDesc,
   });
   
-  // Build changelog from selected commits
-  const changelog = selected.map((c) => c.message);
-  console.log(chalk.dim("\nChangelog:"));
-  changelog.forEach((c) => console.log(chalk.dim(`  - ${c}`)));
+  // Infer ship type from first commit
+  const shipType = inferShipType(selected[0].message);
   
   // Build proof URLs — link to each selected commit
   const proofUrls = selected.map((c) => `${repoUrl}/commit/${c.hash}`);
+  
+  // Check if a different agent would be better suited
+  const suggestion = pickShipAgent(shipType, title, description, proofUrls);
+  
+  if (suggestion.recommended !== agentHandle) {
+    const profile = getAgentProfile(suggestion.recommended);
+    const suggestedKeyPair = loadKeyPair(suggestion.recommended);
+    
+    if (suggestedKeyPair && config.agents[suggestion.recommended]) {
+      if (suggestion.confidence === "high") {
+        // Auto-switch on high confidence
+        console.log();
+        console.log(chalk.cyan(`🎯 Auto-routing to ${chalk.bold("@" + suggestion.recommended)}`));
+        console.log(chalk.dim(`   ${profile?.role ?? ""}`));
+        console.log(chalk.dim(`   ${suggestion.reason}`));
+        agentHandle = suggestion.recommended;
+      } else {
+        // Ask on medium/low confidence
+        console.log();
+        console.log(chalk.yellow(`💡 Suggestion: This looks like ${chalk.bold("@" + suggestion.recommended)}'s work`));
+        console.log(chalk.dim(`   ${profile?.role ?? ""}`));
+        console.log(chalk.dim(`   ${suggestion.reason} (${suggestion.confidence} confidence)`));
+        
+        const switchAgent = await confirm({
+          message: `Ship as @${suggestion.recommended} instead of @${agentHandle}?`,
+          default: true,
+        });
+        if (switchAgent) {
+          agentHandle = suggestion.recommended;
+        }
+      }
+    }
+  }
+  
+  console.log(chalk.dim(`\nShipping as @${agentHandle}\n`));
+  
+  // Build changelog from selected commits
+  const changelog = selected.map((c) => c.message);
+  console.log(chalk.dim("Changelog:"));
+  changelog.forEach((c) => console.log(chalk.dim(`  - ${c}`)));
+  
   console.log(chalk.dim("\nProof:"));
   proofUrls.forEach((p) => console.log(chalk.dim(`  ${p}`)));
   
@@ -199,14 +238,19 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     return;
   }
   
-  // Load keys
+  // Load keys for final agent
   const keyPair = loadKeyPair(agentHandle);
   if (!keyPair) {
-    console.log(chalk.red("Could not load keys for " + agentHandle));
+    console.log(chalk.red("Could not load keys for @" + agentHandle));
     return;
   }
   
-  const shipType = inferShipType(selected[0].message);
+  const agent = config.agents[agentHandle];
+  if (!agent) {
+    console.log(chalk.red("Agent config not found for @" + agentHandle));
+    return;
+  }
+  
   const proof = proofUrls.map((url) => ({ type: "github" as const, value: url }));
   const agentId = agent.agentId;
   
