@@ -76,6 +76,50 @@ function inferShipType(message: string): string {
   return "feature";
 }
 
+/**
+ * Generate a 2-sentence description from commit messages
+ */
+function suggestDescription(commits: GitCommit[]): string {
+  if (commits.length === 0) return "";
+  
+  // Clean commit message: remove prefix (feat:, fix:, etc) and capitalize
+  const cleanMessage = (msg: string): string => {
+    return msg
+      .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
+      .replace(/^./, (c) => c.toUpperCase());
+  };
+  
+  const firstCommit = cleanMessage(commits[0].message);
+  
+  if (commits.length === 1) {
+    // Single commit: describe what + add context
+    const shipType = inferShipType(commits[0].message);
+    const context = {
+      feature: "New functionality added to the project.",
+      fix: "Resolves an issue affecting functionality.",
+      docs: "Improves project documentation.",
+      refactor: "Code quality improvement with no behavior change.",
+      security: "Strengthens security posture.",
+      test: "Improves test coverage.",
+    }[shipType] || "Incremental improvement to the project.";
+    
+    return `${firstCommit.replace(/\.$/, "")}. ${context}`;
+  }
+  
+  // Multiple commits: summarize scope
+  const types = commits.map(c => inferShipType(c.message));
+  const uniqueTypes = [...new Set(types)];
+  
+  let scope = "";
+  if (uniqueTypes.length === 1) {
+    scope = `${commits.length} related changes`;
+  } else {
+    scope = `${commits.length} changes spanning ${uniqueTypes.slice(0, 3).join(", ")}`;
+  }
+  
+  return `${firstCommit.replace(/\.$/, "")}. Includes ${scope}.`;
+}
+
 export async function suggestCommand(options: { days?: number; last?: number }) {
   const repoUrl = getRepoUrl();
   if (!repoUrl) {
@@ -129,8 +173,10 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     default: suggestedTitle,
   });
   
+  const suggestedDesc = suggestDescription(selected);
   const description = await input({
-    message: "Description (one sentence):",
+    message: "Description (2 sentences):",
+    default: suggestedDesc,
   });
   
   // Build changelog from selected commits

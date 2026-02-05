@@ -26,6 +26,34 @@ const SHIP_TYPES = [
   { value: "other", name: "Other" },
 ];
 
+/**
+ * Generate a 2-sentence description suggestion from title + type
+ */
+function suggestDescription(title: string, shipType: string): string {
+  // Clean title: remove prefix (feat:, fix:, etc) and ensure proper capitalization
+  const cleanTitle = title
+    .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
+    .replace(/^./, (c) => c.toUpperCase())
+    .replace(/\.$/, "");
+  
+  // Add contextual second sentence based on ship type
+  const context: Record<string, string> = {
+    feature: "New functionality added to the project.",
+    enhancement: "Improves existing functionality.",
+    fix: "Resolves an issue affecting users.",
+    refactor: "Code quality improvement with no behavior change.",
+    docs: "Improves project documentation.",
+    api: "Backend API changes.",
+    ui: "User interface improvements.",
+    security: "Strengthens security posture.",
+    infrastructure: "DevOps and infrastructure work.",
+    content: "New content published.",
+    other: "Incremental project improvement.",
+  };
+  
+  return `${cleanTitle}. ${context[shipType] || context.other}`;
+}
+
 interface ShipOptions {
   title?: string;
   description?: string;
@@ -80,8 +108,18 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     validate: (v) => v.trim().length > 0 || "Title is required",
   });
 
+  // Ask for ship type early so we can suggest a description
+  const shipType = options.type ?? await select({
+    message: "Ship type:",
+    choices: SHIP_TYPES,
+    default: "feature",
+  });
+
+  // Generate suggested description from title + type
+  const suggestedDesc = suggestDescription(title, shipType);
   const description = options.description ?? await input({
-    message: "Description (brief summary):",
+    message: "Description (2 sentences):",
+    default: suggestedDesc,
     validate: (v) => v.trim().length > 0 || "Description is required",
   });
 
@@ -124,13 +162,6 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     console.log(chalk.red("\n✗ At least one proof URL is required."));
     process.exit(1);
   }
-
-  // Ship type
-  const shipType = options.type ?? await select({
-    message: "Ship type:",
-    choices: SHIP_TYPES,
-    default: inferShipType(proof),
-  });
 
   // Check if a different agent would be better suited (only if not using --as override)
   let finalAgentHandle = agentHandle;
