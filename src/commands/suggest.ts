@@ -12,13 +12,16 @@ import { submitShip } from "../lib/api.js";
 
 interface GitCommit {
   hash: string;
-  message: string;
+  message: string;  // Subject line
+  body: string;     // Full body (may contain bullet points)
   date: string;
 }
 
 function getRecentCommits(count?: number, days?: number): GitCommit[] {
   try {
-    let cmd = `git log --format="%H|%s|%ai"`;
+    // Use %x00 as delimiter to handle multi-line bodies
+    // Format: hash<NUL>subject<NUL>body<NUL>date<NUL><NUL>
+    let cmd = `git log --format="%H%x00%s%x00%b%x00%ai%x00"`;
     
     if (count) {
       // Get last N commits
@@ -37,17 +40,78 @@ function getRecentCommits(count?: number, days?: number): GitCommit[] {
       stdio: ["pipe", "pipe", "pipe"],
     });
     
+    // Split by double NUL (between commits)
     return output
       .trim()
-      .split("\n")
+      .split("\x00\x00")
       .filter(Boolean)
-      .map((line) => {
-        const [hash, message, date] = line.split("|");
-        return { hash, message, date };
-      });
+      .map((block) => {
+        const parts = block.split("\x00");
+        return {
+          hash: parts[0] || "",
+          message: parts[1] || "",
+          body: (parts[2] || "").trim(),
+          date: parts[3] || "",
+        };
+      })
+      .filter(c => c.hash);
   } catch {
     return [];
   }
+}
+
+/**
+ * Extract changelog items from commit body
+ * Looks for bullet points (-, *, •) or numbered items
+ */
+function extractChangelogFromBody(body: string): string[] {
+  if (!body) return [];
+  
+  const lines = body.split("\n");
+  const items: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Match bullet points: - item, * item, • item
+    // Or numbered: 1. item, 1) item
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+    const numberedMatch = trimmed.match(/^\d+[.)]\s+(.+)$/);
+    
+    if (bulletMatch) {
+      items.push(bulletMatch[1]);
+    } else if (numberedMatch) {
+      items.push(numberedMatch[1]);
+    }
+  }
+  
+  return items;
+}
+
+/**
+ * Build smart changelog from selected commits
+ * Prefers bullet points from commit bodies, falls back to subjects
+ */
+function buildSmartChangelog(commits: GitCommit[]): string[] {
+  const changelog: string[] = [];
+  
+  for (const commit of commits) {
+    // First, try to extract bullet points from body
+    const bodyItems = extractChangelogFromBody(commit.body);
+    
+    if (bodyItems.length > 0) {
+      // Use bullet points from commit body
+      changelog.push(...bodyItems);
+    } else {
+      // Fall back to commit subject (cleaned up)
+      const cleaned = commit.message
+        .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
+        .replace(/^./, (c) => c.toUpperCase());
+      changelog.push(cleaned);
+    }
+  }
+  
+  // Dedupe and limit
+  return [...new Set(changelog)].slice(0, 10);
 }
 
 function getRepoUrl(): string | null {
@@ -262,11 +326,11 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
   
   console.log(chalk.dim(`\nShipping as @${agentHandle}\n`));
   
-  // Build initial changelog from selected commits
-  let changelog = selected.map((c) => c.message);
+  // Build smart changelog from commit bodies (extracts bullet points)
+  let changelog = buildSmartChangelog(selected);
   
   // Let user edit changelog
-  console.log(chalk.dim("Changelog (from commits):"));
+  console.log(chalk.dim("Changelog (extracted from commit bodies):"));
   changelog.forEach((c, i) => console.log(chalk.dim(`  ${i + 1}. ${c}`)));
   
   const editChangelog = await confirm({
@@ -286,8 +350,8 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
       changelog.push(item.trim());
     }
     if (changelog.length === 0) {
-      // Fallback to commits if user clears everything
-      changelog = selected.map((c) => c.message);
+      // Fallback to smart changelog if user clears everything
+      changelog = buildSmartChangelog(selected);
       console.log(chalk.dim("  (Using commit messages as changelog)"));
     }
   }
