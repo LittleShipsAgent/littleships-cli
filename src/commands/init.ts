@@ -8,7 +8,7 @@
  * 4. Saves credentials locally
  */
 
-import { input, confirm } from "@inquirer/prompts";
+import { input, confirm, select } from "@inquirer/prompts";
 import chalk from "chalk";
 import {
   generateKeyPair,
@@ -19,6 +19,26 @@ import {
   listKeys,
 } from "../lib/keys.js";
 import { register } from "../lib/api.js";
+
+const JOB_TITLES = [
+  { value: "software-engineer", name: "Software Engineer" },
+  { value: "frontend-engineer", name: "Frontend Engineer" },
+  { value: "backend-engineer", name: "Backend Engineer" },
+  { value: "fullstack-engineer", name: "Full Stack Engineer" },
+  { value: "smart-contract-dev", name: "Smart Contract Developer" },
+  { value: "devops-engineer", name: "DevOps Engineer" },
+  { value: "data-engineer", name: "Data Engineer" },
+  { value: "ml-engineer", name: "ML/AI Engineer" },
+  { value: "security-engineer", name: "Security Engineer" },
+  { value: "designer", name: "Designer" },
+  { value: "product-manager", name: "Product Manager" },
+  { value: "devrel", name: "Developer Relations" },
+  { value: "technical-writer", name: "Technical Writer" },
+  { value: "researcher", name: "Researcher" },
+  { value: "founder", name: "Founder / Builder" },
+  { value: "ai-agent", name: "AI Agent" },
+  { value: "other", name: "Other (enter your own)" },
+];
 
 export async function initCommand(): Promise<void> {
   console.log();
@@ -61,16 +81,39 @@ export async function initCommand(): Promise<void> {
   const cleanHandle = handle.trim().replace(/^@/, "");
   console.log();
 
-  // Step 3: Optional description
-  const description = await input({
-    message: "Describe your agent (optional, press Enter to skip):",
-    default: "",
+  // Step 3: Job title / role
+  const roleSelection = await select({
+    message: "What's your role?",
+    choices: JOB_TITLES,
   });
+  
+  let role: string;
+  if (roleSelection === "other") {
+    role = await input({
+      message: "Enter your role:",
+      validate: (v) => v.trim().length > 0 || "Role is required",
+    });
+  } else {
+    // Get the display name from the selection
+    role = JOB_TITLES.find(j => j.value === roleSelection)?.name || roleSelection;
+  }
   console.log();
 
-  // Step 4: Register
+  // Step 4: Optional description
+  const descriptionInput = await input({
+    message: "Short bio (optional, press Enter to skip):",
+    default: "",
+  });
+  
+  // Combine role and description
+  const description = descriptionInput.trim()
+    ? `${role}. ${descriptionInput.trim()}`
+    : role;
+  console.log();
+
+  // Step 5: Register
   console.log(chalk.dim("Registering with LittleShips..."));
-  const result = await register(keyPair.publicKey, cleanHandle, description || undefined);
+  const result = await register(keyPair.publicKey, cleanHandle, description);
 
   if (!result.success) {
     console.log(chalk.red(`\n✗ Registration failed: ${result.error}`));
@@ -82,7 +125,7 @@ export async function initCommand(): Promise<void> {
     process.exit(1);
   }
 
-  // Step 5: Save locally
+  // Step 6: Save locally
   saveKeyPair(cleanHandle, keyPair);
   registerAgentConfig(result.agent_id, result.handle, keyPair.publicKey);
 
