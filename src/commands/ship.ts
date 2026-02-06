@@ -27,6 +27,69 @@ const SHIP_TYPES = [
 ];
 
 /**
+ * Infer ship type from title keywords
+ * Order matters - check prefix patterns first, then keywords
+ */
+function inferShipType(title: string): string {
+  const t = title.toLowerCase();
+  
+  // Check conventional commit prefixes FIRST
+  if (t.startsWith("fix:") || t.startsWith("fix(")) return "fix";
+  if (t.startsWith("docs:") || t.startsWith("doc:")) return "docs";
+  if (t.startsWith("refactor:") || t.startsWith("refactor(")) return "refactor";
+  if (t.startsWith("security:") || t.startsWith("sec:")) return "security";
+  if (t.startsWith("ui:") || t.startsWith("style:")) return "ui";
+  
+  // Security patterns (high priority)
+  if (/\b(security|auth|permission|sanitize|validate|injection|xss|csrf|encrypt|token|password|credential|vulnerability|hardening)\b/.test(t)) {
+    return "security";
+  }
+  
+  // Fix patterns
+  if (/\b(fix|bug|issue|error|broken|resolve|patch|hotfix|repair)\b/.test(t)) {
+    return "fix";
+  }
+  
+  // Docs patterns
+  if (/\b(doc|docs|documentation|readme|guide|tutorial|jsdoc)\b/.test(t)) {
+    return "docs";
+  }
+  
+  // Refactor patterns
+  if (/\b(refactor|restructure|reorganize|cleanup|clean up|simplify|dedupe|extract)\b/.test(t)) {
+    return "refactor";
+  }
+  
+  // API patterns
+  if (/\b(api|endpoint|route|handler|backend|server|database|query|migration)\b/.test(t)) {
+    return "api";
+  }
+  
+  // Infrastructure patterns
+  if (/\b(ci|cd|pipeline|docker|kubernetes|deploy|infrastructure|devops|terraform|ansible)\b/.test(t)) {
+    return "infrastructure";
+  }
+  
+  // UI patterns (visual/design keywords)
+  if (/\b(ui|frontend|button|modal|card|layout|animation|style|css|tailwind|design|theme|color|gradient|responsive|icon|avatar|header|footer|nav|sidebar|menu|visual|ux|pill|badge)\b/.test(t)) {
+    return "ui";
+  }
+  
+  // Enhancement patterns
+  if (/\b(enhance|improvement|improve|upgrade|optimize|better|polish)\b/.test(t)) {
+    return "enhancement";
+  }
+  
+  // Content patterns
+  if (/\b(blog|article|post|content|write|publish|announce)\b/.test(t)) {
+    return "content";
+  }
+  
+  // Default to feature
+  return "feature";
+}
+
+/**
  * Generate a 2-sentence description suggestion from title + type
  */
 function suggestDescription(title: string, shipType: string): string {
@@ -159,11 +222,12 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     validate: (v) => v.trim().length > 0 || "Title is required",
   });
 
-  // Ask for ship type early so we can suggest a description
+  // Infer ship type from title, then let user confirm/change
+  const inferredType = inferShipType(title);
   const shipType = options.type ?? await select({
     message: "Ship type:",
     choices: SHIP_TYPES,
-    default: "feature",
+    default: inferredType,
   });
 
   // Generate suggested description from title + type
@@ -328,7 +392,10 @@ function inferProofType(url: string): string {
 /**
  * Infer ship type from proof items
  */
-function inferShipType(proof: ProofItem[]): string {
+/**
+ * Legacy: Infer ship type from proof types (fallback)
+ */
+function inferShipTypeFromProof(proof: ProofItem[]): string {
   const types = proof.map((p) => p.type);
   if (types.includes("github")) return "feature";
   if (types.includes("contract")) return "contract";
