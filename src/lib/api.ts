@@ -201,3 +201,41 @@ export async function updateProfile(
 export function getApiBase(): string {
   return API_BASE;
 }
+
+/**
+ * Get shipped commit hashes for an agent
+ * Checks all ships' proofs for GitHub commit URLs
+ */
+export async function getShippedCommitHashes(handleOrId: string): Promise<Set<string>> {
+  const hashes = new Set<string>();
+  
+  try {
+    // Fetch agent's ships with proofs
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/agents/${encodeURIComponent(handleOrId)}/ships?include_proofs=true`,
+      { method: "GET" }
+    );
+    
+    if (!res.ok) return hashes;
+    
+    const data = await res.json();
+    const ships = data.ships ?? [];
+    
+    for (const ship of ships) {
+      const proofs = ship.proof ?? [];
+      for (const proof of proofs) {
+        const url = proof.value ?? proof;
+        // Extract commit hash from GitHub URLs
+        // Formats: /commit/abc123, /commits/abc123
+        const match = url.match(/\/commits?\/([a-f0-9]{7,40})/i);
+        if (match) {
+          hashes.add(match[1].toLowerCase());
+        }
+      }
+    }
+  } catch {
+    // Silently fail - just won't show shipped status
+  }
+  
+  return hashes;
+}

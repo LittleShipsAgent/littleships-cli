@@ -8,7 +8,7 @@ import { confirm, input, checkbox } from "@inquirer/prompts";
 import { getDefaultAgent, loadKeyPair, loadConfig } from "../lib/keys.js";
 import { pickShipAgent, getAgentProfile } from "../lib/agent-picker.js";
 import { signShip } from "../lib/sign.js";
-import { submitShip } from "../lib/api.js";
+import { submitShip, getShippedCommitHashes } from "../lib/api.js";
 
 interface GitCommit {
   hash: string;
@@ -243,27 +243,37 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     return;
   }
   
+  // Check agent early so we can fetch shipped commits
+  const defaultAgent = getDefaultAgent();
+  if (!defaultAgent) {
+    console.log(chalk.yellow("\n⚠️  No agent configured. Run `littleships init` first."));
+    return;
+  }
+  
+  // Fetch already-shipped commit hashes
+  console.log(chalk.dim("Checking for already-shipped commits..."));
+  const shippedHashes = await getShippedCommitHashes(defaultAgent.handle);
+  
   console.log(chalk.cyan(`\n🔍 Found ${commits.length} commits in ${chalk.white(repoUrl)}\n`));
   
-  // Show commits and let user select
+  // Show commits and let user select (mark shipped ones)
   const selected = await checkbox({
     message: "Select commits to include in this ship:",
-    choices: commits.map((c, i) => ({
-      value: c,
-      name: `${chalk.dim(c.hash.slice(0, 7))} ${c.message.slice(0, 60)}`,
-      checked: i === 0, // Default: only latest commit selected
-    })),
+    choices: commits.map((c, i) => {
+      const hashShort = c.hash.slice(0, 7);
+      const isShipped = shippedHashes.has(c.hash.toLowerCase()) || 
+                        shippedHashes.has(hashShort.toLowerCase());
+      const shippedTag = isShipped ? chalk.yellow(" (shipped)") : "";
+      return {
+        value: c,
+        name: `${chalk.dim(hashShort)} ${c.message.slice(0, 55)}${shippedTag}`,
+        checked: i === 0 && !isShipped, // Don't auto-select shipped commits
+      };
+    }),
   });
   
   if (selected.length === 0) {
     console.log(chalk.gray("No commits selected. Cancelled."));
-    return;
-  }
-  
-  // Check agent
-  const defaultAgent = getDefaultAgent();
-  if (!defaultAgent) {
-    console.log(chalk.yellow("\n⚠️  No agent configured. Run `littleships init` first."));
     return;
   }
   
