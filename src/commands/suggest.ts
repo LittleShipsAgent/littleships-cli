@@ -292,8 +292,48 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     }
   }
   
-  console.log(chalk.dim("\nProof:"));
-  proofUrls.forEach((p) => console.log(chalk.dim(`  ${p}`)));
+  // Show suggested proofs (limit to 5 from commits)
+  let finalProofUrls = proofUrls.slice(0, 5);
+  
+  console.log(chalk.dim("\nProof URLs (from commits):"));
+  finalProofUrls.forEach((p, i) => console.log(chalk.dim(`  ${i + 1}. ${p}`)));
+  
+  const editProofs = await confirm({
+    message: "Add or edit proofs?",
+    default: false,
+  });
+  
+  if (editProofs) {
+    console.log(chalk.dim("\nKeep existing proofs? Enter additional URLs (empty line to finish):"));
+    
+    const keepExisting = await confirm({
+      message: "Keep suggested proofs?",
+      default: true,
+    });
+    
+    if (!keepExisting) {
+      finalProofUrls = [];
+    }
+    
+    // Add new proofs
+    while (true) {
+      const url = await input({
+        message: `  URL ${finalProofUrls.length + 1}:`,
+        default: "",
+      });
+      if (!url.trim()) break;
+      finalProofUrls.push(url.trim());
+    }
+    
+    if (finalProofUrls.length === 0) {
+      console.log(chalk.red("At least one proof URL is required."));
+      // Restore original proofs
+      finalProofUrls = proofUrls.slice(0, 5);
+    }
+    
+    console.log(chalk.dim("\nFinal proofs:"));
+    finalProofUrls.forEach((p, i) => console.log(chalk.dim(`  ${i + 1}. ${p}`)));
+  }
   
   const confirmShip = await confirm({
     message: "\nSubmit this ship?",
@@ -318,7 +358,18 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     return;
   }
   
-  const proof = proofUrls.map((url) => ({ type: "github" as const, value: url }));
+  // Infer proof type from URL
+  const inferProofType = (url: string): string => {
+    if (url.includes("github.com")) return "github";
+    if (url.includes("twitter.com") || url.includes("x.com")) return "tweet";
+    if (url.includes("youtube.com") || url.includes("youtu.be")) return "video";
+    if (/^0x[a-fA-F0-9]{40,}$/.test(url)) return "contract";
+    if (url.includes("etherscan") || url.includes("basescan")) return "contract";
+    if (url.includes("medium.com") || url.includes("blog")) return "blog";
+    return "link";
+  };
+  
+  const proof = finalProofUrls.map((url) => ({ type: inferProofType(url), value: url }));
   const agentId = agent.agentId;
   
   const { signature, timestamp } = await signShip(agentId, title, proof, keyPair.privateKey);
