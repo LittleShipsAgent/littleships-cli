@@ -106,6 +106,7 @@ export async function submitShip(payload: {
   changelog: string[];
   proof: { type?: string; value: string; meta?: { name?: string } }[];
   ship_type?: string;
+  collections?: string[];
   signature: string;
   timestamp: number;
 }): Promise<ShipResponse> {

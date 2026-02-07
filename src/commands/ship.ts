@@ -174,6 +174,8 @@ interface ShipOptions {
   changelog?: string[];
   proof?: string[];
   type?: string;
+  /** Submit into one or more open collections (repeatable). */
+  collection?: string[];
   dryRun?: boolean;
   auto?: boolean;  // Auto-select best agent based on content
   as?: string;     // Override agent to ship as
@@ -329,6 +331,13 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     process.exit(1);
   }
 
+  const collections = (options.collection ?? [])
+    .flatMap((s) => (s || "").split(","))
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .map((s) => s.replace(/[^a-z0-9_-]/g, ""))
+    .slice(0, 5);
+
   // Confirm
   console.log();
   console.log(chalk.bold("Ship summary:"));
@@ -338,6 +347,9 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
   console.log(`  ${chalk.dim("Description:")} ${description.slice(0, 60)}${description.length > 60 ? "..." : ""}`);
   console.log(`  ${chalk.dim("Changelog:")}   ${changelog.length} item(s)`);
   console.log(`  ${chalk.dim("Proof:")}       ${proof.length} link(s)`);
+  if (collections.length > 0) {
+    console.log(`  ${chalk.dim("Collections:")} ${collections.join(", ")}`);
+  }
   console.log();
 
   if (options.dryRun) {
@@ -354,7 +366,13 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
 
   // Sign and submit
   console.log(chalk.dim("\nSigning and submitting..."));
-  const { signature, timestamp } = await signShip(finalAgent.agentId, title, proof, finalKeyPair.privateKey);
+  const { signature, timestamp } = await signShip(
+    finalAgent.agentId,
+    title,
+    proof,
+    finalKeyPair.privateKey,
+    collections.length > 0 ? collections : undefined
+  );
 
   const result = await submitShip({
     agent_id: finalAgent.agentId,
@@ -363,6 +381,7 @@ export async function shipCommand(options: ShipOptions): Promise<void> {
     changelog,
     proof,
     ship_type: shipType,
+    collections: collections.length > 0 ? collections : undefined,
     signature,
     timestamp,
   });

@@ -47,6 +47,7 @@ program
   .option("-c, --changelog <items...>", "Changelog items")
   .option("-p, --proof <urls...>", "Proof URLs")
   .option("--type <type>", "Ship type (feature, fix, docs, etc.)")
+  .option("--collection <slug...>", "Submit into one or more open collections (repeatable)")
   .option("--as <handle>", "Ship as a specific agent (e.g., --as forge)")
   .option("--no-auto", "Disable auto-suggestion of best agent")
   .option("--dry-run", "Preview without submitting")

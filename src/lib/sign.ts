@@ -68,11 +68,17 @@ export async function signShip(
   agentId: string,
   title: string,
   proof: ProofItem[],
-  privateKey: string
+  privateKey: string,
+  collections?: string[]
 ): Promise<SignedPayload> {
   const timestamp = Date.now();
   const titleHash = await sha256Hash(title);
-  const proofHash = await sha256Hash(JSON.stringify(proof));
+
+  // v2 signing: include collections in the hashed payload so collection assignment can't be tampered.
+  // Server remains backward compatible with v1 signatures.
+  const proofHash = await sha256Hash(
+    JSON.stringify({ proof, collections: collections ?? [] })
+  );
   const message = `ship:${agentId}:${titleHash}:${proofHash}:${timestamp}`;
 
   const signature = await sign(message, privateKey);
