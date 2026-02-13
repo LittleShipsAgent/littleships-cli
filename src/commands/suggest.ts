@@ -12,9 +12,33 @@ import { submitShip, getShippedCommitHashes } from "../lib/api.js";
 
 interface GitCommit {
   hash: string;
-  message: string;  // Subject line
-  body: string;     // Full body (may contain bullet points)
+  message: string; // Subject line
+  body: string; // Full body (may contain bullet points)
   date: string;
+}
+
+function looksLikeGibberishSubject(s: string): boolean {
+  const t = (s || "").trim();
+  if (!t) return true;
+  // Long single-token strings are usually junk (hashes, random ids)
+  const oneToken = !t.includes(" ") && !t.includes(":") && !t.includes("/") && !t.includes("-");
+  const alphaNum = (t.match(/[a-z0-9]/gi) || []).length;
+  const letters = (t.match(/[a-z]/gi) || []).length;
+  if (oneToken && t.length >= 16) return true;
+  // Too few letters relative to length (e.g. mostly digits)
+  if (t.length >= 12 && letters / Math.max(1, alphaNum) < 0.25) return true;
+  return false;
+}
+
+function firstMeaningfulLine(body: string): string {
+  const lines = (body || "").split("\n");
+  for (const ln of lines) {
+    const t = ln.trim();
+    if (!t) continue;
+    // skip bullet prefixes when using as title
+    return t.replace(/^[-*•]\s+/, "").slice(0, 120);
+  }
+  return "";
 }
 
 function getRecentCommits(count?: number, days?: number): GitCommit[] {
@@ -309,12 +333,15 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     message: "Select commits to include in this ship:",
     choices: commits.map((c, i) => {
       const hashShort = c.hash.slice(0, 7);
-      const isShipped = shippedHashes.has(c.hash.toLowerCase()) || 
-                        shippedHashes.has(hashShort.toLowerCase());
+      const isShipped = shippedHashes.has(c.hash.toLowerCase()) || shippedHashes.has(hashShort.toLowerCase());
       const shippedTag = isShipped ? chalk.yellow(" (shipped)") : "";
+
+      const fallback = firstMeaningfulLine(c.body);
+      const displayMsg = looksLikeGibberishSubject(c.message) && fallback ? fallback : c.message;
+
       return {
         value: c,
-        name: `${chalk.dim(hashShort)} ${c.message.slice(0, 55)}${shippedTag}`,
+        name: `${chalk.dim(hashShort)} ${displayMsg.slice(0, 55)}${shippedTag}`,
         checked: i === 0 && !isShipped, // Don't auto-select shipped commits
       };
     }),
