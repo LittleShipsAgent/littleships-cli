@@ -322,9 +322,14 @@ export async function suggestCommand(options: { days?: number; last?: number }) 
     return;
   }
   
-  // Fetch already-shipped commit hashes
+  // Fetch already-shipped commit hashes (across all configured agents)
   console.log(chalk.dim("Checking for already-shipped commits..."));
-  const shippedHashes = await getShippedCommitHashes(defaultAgent.handle);
+  const cfg = loadConfig();
+  const shippedHashes = new Set<string>();
+  for (const a of Object.values(cfg.agents || {})) {
+    const hs = await getShippedCommitHashes(a.handle || a.agentId);
+    hs.forEach((h) => shippedHashes.add(h));
+  }
   
   console.log(chalk.cyan(`\n🔍 Found ${commits.length} commits in ${chalk.white(repoUrl)}\n`));
   
