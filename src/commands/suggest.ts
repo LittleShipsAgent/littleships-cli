@@ -43,42 +43,38 @@ function firstMeaningfulLine(body: string): string {
 
 function getRecentCommits(count?: number, days?: number): GitCommit[] {
   try {
-    // Use %x00 as delimiter to handle multi-line bodies
-    // Format: hash<NUL>subject<NUL>body<NUL>date<NUL><NUL>
-    let cmd = `git log --format="%H%x00%s%x00%b%x00%ai%x00"`;
-    
+    // Robust parsing: record separator (\x1e) between commits, unit separator (\x1f) between fields.
+    // Format: hash<US>subject<US>body<US>date<RS>
+    let cmd = `git log --format="%H%x1f%s%x1f%b%x1f%ai%x1e"`;
+
     if (count) {
-      // Get last N commits
       cmd += ` -n ${Math.max(1, Math.min(50, count))}`;
     } else if (days) {
-      // Get commits from last N days
       const safeDays = Math.max(1, Math.min(365, Math.floor(days) || 7));
       cmd += ` --since="${safeDays} days ago"`;
     } else {
-      // Default: last 7 days
       cmd += ` --since="7 days ago"`;
     }
-    
+
     const output = execSync(cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    
-    // Split by double NUL (between commits)
+
     return output
-      .trim()
-      .split("\x00\x00")
+      .split("\x1e")
+      .map((rec) => rec.trim())
       .filter(Boolean)
-      .map((block) => {
-        const parts = block.split("\x00");
+      .map((rec) => {
+        const parts = rec.split("\x1f");
         return {
-          hash: parts[0] || "",
-          message: parts[1] || "",
+          hash: (parts[0] || "").trim(),
+          message: (parts[1] || "").trim(),
           body: (parts[2] || "").trim(),
-          date: parts[3] || "",
+          date: (parts[3] || "").trim(),
         };
       })
-      .filter(c => c.hash);
+      .filter((c) => /^[a-f0-9]{7,40}$/i.test(c.hash));
   } catch {
     return [];
   }
@@ -119,19 +115,24 @@ function buildSmartChangelog(commits: GitCommit[]): string[] {
   const changelog: string[] = [];
   
   for (const commit of commits) {
-    // First, try to extract bullet points from body
     const bodyItems = extractChangelogFromBody(commit.body);
-    
+
     if (bodyItems.length > 0) {
-      // Use bullet points from commit body
       changelog.push(...bodyItems);
-    } else {
-      // Fall back to commit subject (cleaned up)
-      const cleaned = commit.message
-        .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
-        .replace(/^./, (c) => c.toUpperCase());
-      changelog.push(cleaned);
+      continue;
     }
+
+    // Fall back to subject — but use body line if subject is junk
+    const subj = commit.message || "";
+    const fallback = firstMeaningfulLine(commit.body);
+    const base = looksLikeGibberishSubject(subj) && fallback ? fallback : subj;
+
+    const cleaned = base
+      .replace(/^(feat|fix|docs|refactor|chore|test|security|style|perf|ci|build)(\(.+?\))?:\s*/i, "")
+      .replace(/^./, (c) => c.toUpperCase())
+      .slice(0, 140);
+
+    if (cleaned.trim()) changelog.push(cleaned);
   }
   
   // Dedupe and limit
